@@ -12,6 +12,8 @@ export default function Home() {
   const [hearts, setHearts] = useState<Array<{ id: number; x: number; y: number }>>([]);
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
     setDimensions({
       width: window.innerWidth,
       height: window.innerHeight
@@ -29,6 +31,8 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    if (dimensions.width === 0 || dimensions.height === 0) return;
+    
     // Initialize floating hearts
     const initialHearts = Array.from({ length: 15 }, (_, i) => ({
       id: i,
@@ -123,7 +127,7 @@ export default function Home() {
                 transition={{ delay: 1 }}
               >
                 <p className="font-dancing">
-                  Every moment with you is a gift, and today is extra special because it's all about you.
+                  Every moment with you is a gift, and today is extra special because it&apos;s all about you.
                   Your smile lights up my world, and your love makes everything beautiful.
                 </p>
               </motion.div>

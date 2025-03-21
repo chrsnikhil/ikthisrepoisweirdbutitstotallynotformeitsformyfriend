@@ -1,143 +1,83 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { motion } from 'framer-motion';
+import { useEffect, useRef } from 'react';
+import dynamic from 'next/dynamic';
+import type p5Type from 'p5';
 
-const DrawingCanvas = () => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [clickCount, setClickCount] = useState(0);
-  const maxClicks = 40;
-  const symmetry = 24;
-  const drawingPoints = useRef<any[]>([]);
+interface Point {
+  x: number;
+  y: number;
+  color: p5Type.Color;
+}
 
+const DrawingCanvas: React.FC = () => {
+  const canvasRef = useRef<HTMLDivElement>(null);
+  
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (typeof window === 'undefined' || !canvasRef.current) return;
 
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    const initP5 = async () => {
+      const p5 = (await import('p5')).default;
 
-    // Set canvas size
-    const resizeCanvas = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-      ctx.fillStyle = '#000';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-    };
-
-    resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
-
-    // Animation frame
-    let animationFrame: number;
-    const animate = () => {
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.01)';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      ctx.save();
-      ctx.translate(canvas.width / 2, canvas.height / 2);
-
-      drawingPoints.current.forEach((point, index) => {
-        const angle = 360 / symmetry;
+      const sketch = (p: p5Type) => {
+        let points: Point[] = [];
         
-        for (let i = 0; i < symmetry; i++) {
-          ctx.rotate((angle * Math.PI) / 180);
+        p.setup = () => {
+          const canvas = p.createCanvas(window.innerWidth, window.innerHeight);
+          canvas.parent(canvasRef.current!);
+          p.background(0);
+          p.noStroke();
+        };
+
+        p.draw = () => {
+          p.background(0, 10);
           
-          // Draw with gradient effect
-          const gradientSteps = 8;
-          for (let j = 0; j < gradientSteps; j++) {
-            const alpha = (1 - j / gradientSteps) * 0.8;
-            const hue = ((index / maxClicks) * 360 + Date.now() * 0.1) % 360;
-            ctx.strokeStyle = `hsla(${hue}, 80%, 60%, ${alpha})`;
-            ctx.lineWidth = 4 - (j * 3) / gradientSteps;
+          if (p.mouseIsPressed) {
+            const color = p.color(
+              p.random(150, 255),
+              p.random(100, 200),
+              p.random(150, 255),
+              p.random(150, 200)
+            );
             
-            ctx.beginPath();
-            ctx.moveTo(point.x, point.y);
-            ctx.lineTo(point.px, point.py);
-            ctx.stroke();
-
-            // Draw reflected line
-            ctx.save();
-            ctx.scale(1, -1);
-            ctx.beginPath();
-            ctx.moveTo(point.x, point.y);
-            ctx.lineTo(point.px, point.py);
-            ctx.stroke();
-            ctx.restore();
+            points.push({
+              x: p.mouseX,
+              y: p.mouseY,
+              color: color
+            });
           }
-        }
-      });
 
-      ctx.restore();
-      animationFrame = requestAnimationFrame(animate);
+          points.forEach((point) => {
+            p.fill(point.color);
+            p.circle(point.x, point.y, 20);
+            
+            // Mirror effect
+            p.circle(p.width - point.x, point.y, 20);
+            p.circle(point.x, p.height - point.y, 20);
+            p.circle(p.width - point.x, p.height - point.y, 20);
+          });
+
+          // Limit the number of points to prevent performance issues
+          if (points.length > 100) {
+            points = points.slice(-100);
+          }
+        };
+
+        p.windowResized = () => {
+          p.resizeCanvas(window.innerWidth, window.innerHeight);
+          p.background(0);
+        };
+      };
+
+      new p5(sketch);
     };
 
-    animate();
-
-    return () => {
-      window.removeEventListener('resize', resizeCanvas);
-      cancelAnimationFrame(animationFrame);
-    };
+    initP5();
   }, []);
 
-  const handleClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (clickCount >= maxClicks) return;
-
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left - canvas.width / 2;
-    const y = e.clientY - rect.top - canvas.height / 2;
-    
-    const angle = (Math.PI * 2 / maxClicks) * clickCount;
-    const radius = Math.sqrt(x * x + y * y);
-    
-    const px = Math.cos(angle) * radius;
-    const py = Math.sin(angle) * radius;
-
-    drawingPoints.current.push({
-      x: px,
-      y: py,
-      px: px * 0.3,
-      py: py * 0.3,
-      index: clickCount
-    });
-
-    if (clickCount > 0) {
-      const prevPoint = drawingPoints.current[clickCount - 1];
-      drawingPoints.current.push({
-        x: px,
-        y: py,
-        px: prevPoint.x,
-        py: prevPoint.y,
-        index: clickCount + maxClicks/2
-      });
-    }
-
-    setClickCount(prev => prev + 1);
-  };
-
-  return (
-    <div className="relative w-full h-full">
-      <canvas
-        ref={canvasRef}
-        onClick={handleClick}
-        className="cursor-pointer"
-      />
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="absolute top-4 left-1/2 transform -translate-x-1/2 text-white text-xl font-dancing text-center bg-black/50 px-6 py-2 rounded-full"
-      >
-        {clickCount < maxClicks ? (
-          `Click to Draw (${maxClicks - clickCount} left)`
-        ) : (
-          'Pattern Complete! ✨'
-        )}
-      </motion.div>
-    </div>
-  );
+  return <div ref={canvasRef} style={{ width: '100%', height: '100%' }} />;
 };
 
-export default DrawingCanvas; 
+export default dynamic(() => Promise.resolve(DrawingCanvas), {
+  ssr: false
+}); 

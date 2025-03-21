@@ -1,12 +1,22 @@
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
+import { Playfair_Display, Dancing_Script } from 'next/font/google'
 import './globals.css'
 
-const inter = Inter({ subsets: ['latin'] })
+const playfair = Playfair_Display({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-playfair',
+})
+
+const dancing = Dancing_Script({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-dancing',
+})
 
 export const metadata: Metadata = {
-  title: 'Happy Birthday Yazhini! ✨',
-  description: 'A special birthday message for a special person',
+  title: 'Happy Birthday Yazhini!',
+  description: 'A special birthday website for a special person',
 }
 
 export default function RootLayout({
@@ -15,14 +25,8 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
-      <head>
-        <link
-          href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Dancing+Script:wght@400;700&display=swap"
-          rel="stylesheet"
-        />
-      </head>
-      <body className={inter.className}>{children}</body>
+    <html lang="en" className={`${playfair.variable} ${dancing.variable}`}>
+      <body>{children}</body>
     </html>
   )
 } 
